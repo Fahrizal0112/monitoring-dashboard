@@ -1,0 +1,12 @@
+
+╔════════════════════════════════════════════════╗
+║                                                ║
+║   🚀 System Dashboard is now running!          ║
+║                                                ║
+║   📊 Access at: http://localhost:3001       ║
+║   🌐 Network: http://$(hostname -I | cut -d' ' -f1):3001
+║                                                ║
+║   Press Ctrl+C to stop                         ║
+║                                                ║
+╚════════════════════════════════════════════════╝
+    
