@@ -11,8 +11,36 @@ const app = express();
 const PORT = 3001;
 const WORKSPACE = '/root/.openclaw/workspace';
 
+// Basic Auth credentials (can be overridden by env vars)
+const DASHBOARD_USER = process.env.DASHBOARD_USER || 'fahrizal';
+const DASHBOARD_PASS = process.env.DASHBOARD_PASS || '@Facriz3f';
+
 // Parse JSON bodies
 app.use(express.json());
+
+// Basic Auth middleware
+app.use((req, res, next) => {
+    const auth = req.headers.authorization || '';
+
+    if (!auth.startsWith('Basic ')) {
+        res.setHeader('WWW-Authenticate', 'Basic realm="Monitoring Dashboard"');
+        return res.status(401).send('Authentication required');
+    }
+
+    try {
+        const b64 = auth.split(' ')[1] || '';
+        const [user, pass] = Buffer.from(b64, 'base64').toString('utf8').split(':');
+
+        if (user === DASHBOARD_USER && pass === DASHBOARD_PASS) {
+            return next();
+        }
+    } catch (e) {
+        // fall through to unauthorized
+    }
+
+    res.setHeader('WWW-Authenticate', 'Basic realm="Monitoring Dashboard"');
+    return res.status(401).send('Unauthorized');
+});
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
