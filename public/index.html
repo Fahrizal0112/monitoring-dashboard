@@ -98,6 +98,7 @@ h1{font-size:1.7rem}
 .modal-close{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:8px;width:34px;height:34px;cursor:pointer}
 .modal-body{padding:14px;overflow:auto;background:var(--panel-2)}
 .file-viewer,.logs-viewer{font-family:ui-monospace,Consolas,monospace;background:#050b18;border:1px solid var(--border);padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+.file-editor{width:100%;min-height:420px;background:#050b18;color:#dbeafe;border:1px solid var(--border);border-radius:10px;padding:12px;font-family:ui-monospace,Consolas,monospace;font-size:.9rem;line-height:1.5;resize:vertical}
 .file-info-display{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);margin-bottom:10px}
 .process-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .filter-input,.sort-select,.logs-lines-select,.form-input,.form-select{
@@ -208,7 +209,10 @@ h1{font-size:1.7rem}
                     <span>📄</span>
                     <span id="modalFileName">File Name</span>
                 </div>
-                <button class="modal-close" onclick="closeFileModal()">&times;</button>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-primary" id="saveFileBtn" onclick="saveCurrentFile()" style="display:none; padding:6px 10px;">💾 Save</button>
+                    <button class="modal-close" onclick="closeFileModal()">&times;</button>
+                </div>
             </div>
             <div class="modal-body">
                 <div class="file-info-display" id="fileInfoDisplay"></div>
@@ -370,6 +374,8 @@ h1{font-size:1.7rem}
         let currentSortBy = 'cpu';
         let processRefreshInterval = null;
         let allProcesses = [];
+        let currentEditingFilePath = null;
+        let currentEditingFileIsBinary = false;
         
         function formatBytes(bytes) {
             if (bytes === 0) return '0 Bytes';
@@ -519,24 +525,35 @@ h1{font-size:1.7rem}
                 const response = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
                 const data = await response.json();
                 
+                currentEditingFilePath = data.path;
+                currentEditingFileIsBinary = !!data.isBinary;
+
                 document.getElementById('modalFileName').textContent = data.name;
                 document.getElementById('fileInfoDisplay').innerHTML = `
                     <span>📦 Size: ${formatBytes(data.size)}</span>
                     <span>📅 Modified: ${new Date(data.modified).toLocaleString()}</span>
+                    <span>📍 Path: ${data.path}</span>
                 `;
                 
                 const viewer = document.getElementById('fileViewer');
+                const saveBtn = document.getElementById('saveFileBtn');
                 
                 if (data.isBinary) {
+                    saveBtn.style.display = 'none';
                     viewer.innerHTML = `
                         <div class="binary-warning">
                             <span class="icon">🔒</span>
                             <div>Binary file detected</div>
-                            <div style="margin-top: 10px; font-size: 0.9em;">This file cannot be displayed as text.</div>
+                            <div style="margin-top: 10px; font-size: 0.9em;">This file cannot be displayed/edited as text.</div>
                         </div>
                     `;
                 } else {
-                    viewer.textContent = data.content;
+                    saveBtn.style.display = 'inline-flex';
+                    const safeContent = (data.content || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    viewer.innerHTML = `<textarea id="fileEditor" class="file-editor">${safeContent}</textarea>`;
                 }
                 
                 document.getElementById('fileModal').classList.add('show');
@@ -549,6 +566,43 @@ h1{font-size:1.7rem}
         
         function closeFileModal() {
             document.getElementById('fileModal').classList.remove('show');
+            document.getElementById('saveFileBtn').style.display = 'none';
+            currentEditingFilePath = null;
+            currentEditingFileIsBinary = false;
+        }
+
+        async function saveCurrentFile() {
+            if (!currentEditingFilePath || currentEditingFileIsBinary) return;
+
+            const editor = document.getElementById('fileEditor');
+            if (!editor) return;
+
+            const content = editor.value;
+
+            try {
+                const response = await fetch('/api/file', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentEditingFilePath, content })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alert('✅ File berhasil disimpan');
+                    document.getElementById('fileInfoDisplay').innerHTML = `
+                        <span>📦 Size: ${formatBytes(result.size)}</span>
+                        <span>📅 Modified: ${new Date(result.modified).toLocaleString()}</span>
+                        <span>📍 Path: ${result.path}</span>
+                    `;
+                    fetchFiles(currentPath);
+                } else {
+                    alert('❌ Gagal simpan file: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving file:', error);
+                alert('❌ Error saat menyimpan file');
+            }
         }
         
         async function openProcessModal(sortBy = 'cpu') {

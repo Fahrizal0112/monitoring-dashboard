@@ -580,6 +580,37 @@ app.get('/api/file', (req, res) => {
     }
 });
 
+// API endpoint to save file content
+app.put('/api/file', (req, res) => {
+    try {
+        const { path: filePath, content } = req.body || {};
+
+        if (!filePath || typeof content !== 'string') {
+            return res.status(400).json({ error: 'path and content are required' });
+        }
+
+        const resolvedPath = path.resolve(filePath);
+        const resolvedWorkspace = path.resolve(WORKSPACE);
+
+        if (!resolvedPath.startsWith(resolvedWorkspace)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        // Prevent editing directories
+        if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
+            return res.status(400).json({ error: 'Cannot edit a directory' });
+        }
+
+        fs.writeFileSync(resolvedPath, content, 'utf-8');
+        const stats = fs.statSync(resolvedPath);
+
+        res.json({ success: true, path: resolvedPath, size: stats.size, modified: stats.mtime });
+    } catch (error) {
+        console.error('Error saving file:', error);
+        res.status(500).json({ error: 'Failed to save file' });
+    }
+});
+
 // API endpoint for cron jobs - GET
 app.get('/api/cron', async (req, res) => {
     try {
