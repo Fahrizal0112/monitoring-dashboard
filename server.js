@@ -656,6 +656,55 @@ app.get('/api/pm2/logs/:name', async (req, res) => {
     }
 });
 
+function isSafeProcessName(name) {
+    return /^[a-zA-Z0-9._:-]+$/.test(name);
+}
+
+async function runPM2Action(name, action) {
+    try {
+        if (!isSafeProcessName(name)) {
+            return { success: false, error: 'Invalid process name' };
+        }
+
+        const allowed = ['restart', 'stop', 'start'];
+        if (!allowed.includes(action)) {
+            return { success: false, error: 'Invalid action' };
+        }
+
+        const result = await execAsync(`pm2 ${action} ${name}`);
+        return {
+            success: true,
+            action,
+            name,
+            output: (result.stdout || '').trim()
+        };
+    } catch (error) {
+        return {
+            success: false,
+            action,
+            name,
+            error: error.message
+        };
+    }
+}
+
+// API endpoint for PM2 actions (start/stop/restart)
+app.post('/api/pm2/:name/:action', async (req, res) => {
+    try {
+        const { name, action } = req.params;
+        const result = await runPM2Action(name, action);
+
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Error performing PM2 action:', error);
+        res.status(500).json({ success: false, error: 'Failed to perform PM2 action' });
+    }
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`

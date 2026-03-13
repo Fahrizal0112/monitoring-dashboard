@@ -6,332 +6,201 @@
     <title>System Dashboard</title>
     <style>
 :root {
-  --bg-1: #0b1020;
-  --bg-2: #121a33;
-  --card: rgba(20, 28, 52, 0.72);
-  --card-solid: #141d36;
-  --text: #e9eeff;
-  --muted: #a9b4d0;
-  --primary: #7c9cff;
-  --primary-2: #6ee7ff;
-  --success: #34d399;
+  --bg: #0f172a;
+  --bg-soft: #111c35;
+  --panel: #111827;
+  --panel-2: #0b1222;
+  --text: #e5ecff;
+  --muted: #94a3b8;
+  --primary: #4f46e5;
+  --primary-2: #06b6d4;
+  --border: #1f2a44;
+  --ok: #22c55e;
   --warn: #f59e0b;
-  --danger: #f87171;
-  --border: rgba(152, 173, 255, 0.22);
-  --shadow: 0 16px 44px rgba(1, 6, 25, 0.45);
+  --danger: #ef4444;
 }
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background:
-    radial-gradient(1200px 800px at 8% -10%, #2949a8 0%, transparent 58%),
-    radial-gradient(1000px 720px at 110% 0%, #115e77 0%, transparent 45%),
-    linear-gradient(140deg, var(--bg-1), var(--bg-2));
-  color: var(--text);
-  min-height: 100vh;
-  padding: 22px;
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family: Inter,Segoe UI,system-ui,sans-serif;
+  background: radial-gradient(1200px 600px at 0% 0%, #1d2d5c 0%, transparent 55%), linear-gradient(135deg,#080d1a,#0f172a 65%);
+  color:var(--text);
+  min-height:100vh;
 }
-
-.container {
-  max-width: 1360px;
-  margin: 0 auto;
-  position: relative;
+.dashboard-shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+.sidebar{
+  border-right:1px solid var(--border);
+  background:rgba(8,13,26,.8);
+  backdrop-filter:blur(6px);
+  padding:24px 18px;
+  position:sticky;top:0;height:100vh;
 }
-
-#clock {
-  position: fixed;
-  right: 22px;
-  top: 16px;
-  background: rgba(10, 15, 32, 0.76);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 10px 14px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(9px);
-  z-index: 999;
-  display: flex;
-  gap: 10px;
-  align-items: center;
+.brand{font-size:1.1rem;font-weight:700;letter-spacing:.3px;margin-bottom:22px}
+.side-meta{font-size:.88rem;color:var(--muted);line-height:1.6}
+.quick-actions{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.btn-ghost{
+  background:transparent;border:1px solid var(--border);color:var(--text);
+  border-radius:10px;padding:9px 12px;text-align:left;cursor:pointer
 }
-#clock .time { font-weight: 700; letter-spacing: .2px; }
-#clock .date { color: var(--muted); font-size: .9rem; }
-
-h1 {
-  text-align: left;
-  margin-bottom: 22px;
-  font-size: 2rem;
-  letter-spacing: .3px;
+.main{padding:22px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:10px;flex-wrap:wrap}
+h1{font-size:1.7rem}
+#clock{display:flex;gap:10px;font-size:.9rem;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:9px 12px}
+#clock .time{color:var(--text);font-weight:700}
+.grid-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.card{background:rgba(13,19,37,.9);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 32px rgba(0,0,0,.3)}
+.stat-card{padding:16px;cursor:pointer;transition:.2s}
+.stat-card:hover{transform:translateY(-2px);border-color:#30416a}
+.stat-card h3{font-size:.95rem;color:#c7d2fe;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.stat-value{font-size:1.9rem;font-weight:800;margin-bottom:4px}
+.stat-details{font-size:.9rem;color:var(--muted)}
+.progress-bar{height:9px;background:#1e293b;border-radius:999px;margin-top:12px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-2));}
+.progress-fill.warning{background:linear-gradient(90deg,#f59e0b,#f97316)}
+.progress-fill.danger{background:linear-gradient(90deg,#fb7185,#ef4444)}
+.content-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+.panel{padding:16px}
+.panel h2{font-size:1.05rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+.refresh-btn,.add-cron-btn,.btn-primary{
+  background:linear-gradient(135deg,var(--primary),#4338ca);
+  color:#fff;border:none;border-radius:10px;padding:9px 13px;cursor:pointer;font-weight:600
 }
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 22px;
+.refresh-btn:hover,.add-cron-btn:hover,.btn-primary:hover{filter:brightness(1.08)}
+.breadcrumbs{display:flex;flex-wrap:wrap;gap:8px;background:#0a1224;border:1px solid var(--border);padding:10px;border-radius:10px;margin-bottom:10px}
+.breadcrumb-item{color:#a5b4fc;cursor:pointer}
+.breadcrumb-item:hover{text-decoration:underline}
+.breadcrumb-separator{color:#475569}
+.file-list{list-style:none;max-height:390px;overflow:auto;border:1px solid var(--border);border-radius:10px;background:#0a1224}
+.file-item{display:flex;justify-content:space-between;align-items:center;padding:11px 12px;border-bottom:1px solid #1d2744;cursor:pointer}
+.file-item:hover{background:#0f1a34}.file-item:last-child{border-bottom:none}
+.file-meta,.file-size,.last-updated{color:var(--muted);font-size:.86rem}
+.cron-list,.pm2-grid{display:grid;gap:10px}
+.pm2-grid{grid-template-columns:1fr}
+.cron-item,.pm2-card{background:#0a1224;border:1px solid var(--border);border-radius:10px;padding:12px}
+.cron-item-header,.pm2-card-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.cron-expression{font-family:ui-monospace,Consolas,monospace;font-size:.88rem;word-break:break-word}
+.cron-actions{display:flex;gap:6px}
+.cron-action-btn,.btn-secondary{background:transparent;border:1px solid #324269;color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer}
+.cron-action-btn.delete:hover{border-color:var(--danger);color:#fecaca}
+.cron-details,.pm2-card-details{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.82rem}
+.pm2-card-status{padding:3px 8px;border-radius:999px;font-size:.75rem;background:#1e293b}
+.pm2-card-status.online{background:#16341f;color:#86efac}
+.pm2-card-status.stopped,.pm2-card-status.errored{background:#35171b;color:#fca5a5}
+.pm2-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.pm2-action-btn{background:transparent;border:1px solid #324269;color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.8rem}
+.pm2-action-btn:hover{border-color:#6b86c9;background:rgba(255,255,255,.04)}
+.pm2-action-btn.stop:hover{border-color:var(--danger);color:#fecaca}
+.modal{display:none;position:fixed;inset:0;background:rgba(2,6,16,.75);z-index:1000}
+.modal.show{display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-content{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:min(94vw,1100px);max-height:90vh;display:flex;flex-direction:column}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}
+.modal-title{display:flex;align-items:center;gap:8px}
+.modal-close{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:8px;width:34px;height:34px;cursor:pointer}
+.modal-body{padding:14px;overflow:auto;background:var(--panel-2)}
+.file-viewer,.logs-viewer{font-family:ui-monospace,Consolas,monospace;background:#050b18;border:1px solid var(--border);padding:12px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+.file-info-display{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);margin-bottom:10px}
+.process-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.filter-input,.sort-select,.logs-lines-select,.form-input,.form-select{
+  background:#0a1224;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px
 }
-
-.stat-card,
-.workspace-section,
-.cron-section,
-.pm2-section,
-.modal-content {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(9px);
-}
-
-.stat-card {
-  padding: 20px;
-  cursor: pointer;
-  transition: .22s ease;
-}
-.stat-card:hover { transform: translateY(-4px); border-color: rgba(173, 194, 255, 0.45); }
-.stat-card.clickable::after { content: ''; }
-
-.stat-card h3 {
-  color: #d7e3ff;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  font-size: 1rem;
-}
-.stat-card h3 .icon { font-size: 1.2rem; }
-
-.stat-value { font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
-.stat-details { color: var(--muted); font-size: .92rem; }
-
-.progress-bar {
-  width: 100%; height: 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.09);
-  margin-top: 14px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--primary), var(--primary-2));
-}
-.progress-fill.warning { background: linear-gradient(90deg, #f59e0b, #f97316); }
-.progress-fill.danger { background: linear-gradient(90deg, #fb7185, #ef4444); }
-
-.workspace-section,.cron-section,.pm2-section { padding: 22px; margin-top: 18px; }
-.workspace-section { margin-top: 0; }
-
-.workspace-header,.cron-header,.pm2-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.workspace-header h2,.cron-header h2,.pm2-header h2 {
-  display:flex; align-items:center; gap:9px; font-size:1.14rem;
-}
-
-.refresh-btn,.add-cron-btn,.btn-primary {
-  border: 1px solid rgba(152,173,255,.5);
-  background: linear-gradient(135deg, #4f7cff, #4fc3f7);
-  color: white;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.refresh-btn:hover,.add-cron-btn:hover,.btn-primary:hover { filter: brightness(1.05); }
-
-.breadcrumbs {
-  display: flex; flex-wrap: wrap; gap: 7px;
-  background: rgba(255,255,255,.03);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-}
-.breadcrumb-item { color: #c8d6ff; cursor: pointer; }
-.breadcrumb-item:hover { color: white; text-decoration: underline; }
-.breadcrumb-separator { color: #8390b4; }
-
-.file-list { list-style:none; max-height: 460px; overflow-y:auto; border:1px solid var(--border); border-radius:12px; }
-.file-item {
-  padding: 11px 12px;
-  display:flex; justify-content:space-between; align-items:center;
-  border-bottom: 1px solid rgba(152,173,255,.12);
-}
-.file-item:last-child { border-bottom:none; }
-.file-item:hover { background: rgba(255,255,255,.04); }
-.file-name { color: #f0f4ff; }
-.file-meta,.file-size,.last-updated { color: var(--muted); }
-
-.modal { display:none; position: fixed; inset:0; z-index:1000; background: rgba(3,7,20,.72); }
-.modal.show { display:flex; }
-.modal-content { width: min(92vw, 1080px); max-height: 90vh; display:flex; flex-direction:column; overflow:hidden; }
-.modal-header {
-  display:flex; justify-content:space-between; align-items:center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(10,15,32,.7);
-}
-.modal-body { padding: 16px; overflow:auto; background: rgba(5,10,25,.35); }
-.modal-close {
-  width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
-  background: transparent; color: var(--text); font-size: 1.3rem; cursor:pointer;
-}
-
-.file-viewer,.logs-viewer {
-  background: #0a1024;
-  border: 1px solid rgba(152,173,255,.25);
-  border-radius: 10px;
-  padding: 14px;
-  color: #dce7ff;
-}
-.file-info-display { color: var(--muted); display:flex; gap:14px; margin-bottom:10px; flex-wrap:wrap; }
-
-.process-controls { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-.filter-input,.sort-select,.logs-lines-select,.form-input,.form-select {
-  background: rgba(255,255,255,.02);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 9px;
-  padding: 9px 11px;
-}
-.filter-input { min-width: 220px; flex:1; }
-
-.process-table { width:100%; border-collapse: collapse; }
-.process-table thead th {
-  text-align:left; font-weight:600; color:#cbd8ff;
-  border-bottom:1px solid var(--border); padding:10px 8px;
-}
-.process-table tbody td { padding:9px 8px; border-bottom:1px solid rgba(152,173,255,.12); color:#dfe8ff; }
-.process-table tbody tr:hover { background: rgba(255,255,255,.03); }
-.process-table .pid { color:#8ab0ff; }
-.process-table .cpu-high,.process-table .mem-high { color: #ff8b8b; font-weight:700; }
-.process-table .cpu-med,.process-table .mem-med { color: #fbbf24; }
-
-.cron-list,.pm2-grid { display:grid; gap:12px; }
-.pm2-grid { grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); }
-.cron-item,.pm2-card {
-  background: rgba(255,255,255,.03);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-}
-.cron-item:hover,.pm2-card:hover { background: rgba(255,255,255,.06); }
-.cron-expression { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.94rem; }
-.cron-actions { display:flex; gap:8px; }
-.cron-action-btn,.btn-secondary {
-  border:1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-.cron-action-btn.delete:hover { border-color: #f87171; color:#fecaca; }
-
-.form-row { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:10px; }
-.form-label,.form-hint,.auto-refresh-toggle label,.auto-refresh-logs label { color: var(--muted); }
-.form-actions,.logs-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; }
-
-.empty-cron,.empty-pm2,.empty-processes { color: var(--muted); text-align:center; padding: 26px 12px; }
-.loading { opacity:.6; pointer-events:none; }
-
-@media (max-width: 1080px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (max-width: 720px) {
-  body { padding: 14px; }
-  h1 { font-size: 1.5rem; margin-top: 34px; }
-  .workspace-header,.cron-header,.pm2-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .form-row { grid-template-columns: 1fr; }
-  #clock { right: 12px; top: 10px; }
-}
+.filter-input{flex:1;min-width:220px}
+.process-table{width:100%;border-collapse:collapse}
+.process-table th,.process-table td{padding:9px 8px;border-bottom:1px solid #1f2a44;text-align:left}
+.process-table th{color:#cbd5e1;font-size:.86rem}
+.process-table td{font-size:.86rem}
+.process-table .pid{color:#93c5fd}
+.process-table .cpu-high,.process-table .mem-high{color:#fda4af;font-weight:700}
+.process-table .cpu-med,.process-table .mem-med{color:#fcd34d}
+.form-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label,.form-hint{color:var(--muted);font-size:.82rem}
+.form-actions,.logs-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.empty-cron,.empty-pm2,.empty-processes{color:var(--muted);text-align:center;padding:20px}
+.loading{opacity:.6;pointer-events:none}
+@media (max-width:1200px){.content-grid{grid-template-columns:1fr}.dashboard-shell{grid-template-columns:1fr}.sidebar{position:relative;height:auto;border-right:none;border-bottom:1px solid var(--border)}}
+@media (max-width:720px){.grid-top{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-    <div class="container">
-        <div id="clock"><span class="time">--:--:--</span><span class="date">--</span></div>
-        <h1>🖥️ System Dashboard</h1>
-        
-        <div class="stats-grid">
-            <div class="stat-card clickable" onclick="openProcessModal('cpu')">
-                <h3><span class="icon">💾</span> CPU Usage</h3>
-                <div class="stat-value" id="cpu-value">--%</div>
-                <div class="stat-details" id="cpu-details">Loading...</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="cpu-bar" style="width: 0%"></div>
-                </div>
-            </div>
-            
-            <div class="stat-card clickable" onclick="openProcessModal('memory')">
-                <h3><span class="icon">🧠</span> Memory (RAM)</h3>
-                <div class="stat-value" id="ram-value">--%</div>
-                <div class="stat-details" id="ram-details">Loading...</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="ram-bar" style="width: 0%"></div>
-                </div>
-            </div>
-            
-            <div class="stat-card">
-                <h3><span class="icon">💿</span> Storage</h3>
-                <div class="stat-value" id="storage-value">--%</div>
-                <div class="stat-details" id="storage-details">Loading...</div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="storage-bar" style="width: 0%"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="workspace-section">
-            <div class="workspace-header">
-                <h2><span class="icon">📁</span> Workspace File Explorer</h2>
-                <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
-            </div>
-            
-            <div class="breadcrumbs" id="breadcrumbs"></div>
-            
-            <ul class="file-list" id="file-list">
-                <li class="file-item">Loading files...</li>
-            </ul>
-            
-            <p class="last-updated" id="last-updated">Last updated: Never</p>
-        </div>
-        
-        <div class="cron-section">
-            <div class="cron-header">
-                <h2><span class="icon">⏰</span> Cron Jobs</h2>
-                <button class="add-cron-btn" onclick="openCronModal()">➕ Add Cron Job</button>
-            </div>
-            
-            <div class="cron-list" id="cronList">
-                <div class="empty-cron">
-                    <span class="icon">📭</span>
-                    <div>Loading cron jobs...</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="pm2-section">
-            <div class="pm2-header">
-                <h2><span class="icon">⚡</span> PM2 Processes</h2>
-                <button class="add-cron-btn" onclick="refreshPM2()">🔄 Refresh</button>
-            </div>
-            
-            <div class="pm2-grid" id="pm2Grid">
-                <div class="empty-pm2">
-                    <span class="icon">🚫</span>
-                    <div>Loading PM2 processes...</div>
-                </div>
-            </div>
-        </div>
-    </div>
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <div class="brand">🧭 Monitoring Dashboard</div>
+      <div class="side-meta">
+        Tampilan baru yang lebih clean dan fokus.
+        <br/>Semua kontrol utama tetap tersedia.
+      </div>
+      <div class="quick-actions">
+        <button class="btn-ghost" onclick="refreshData()">🔄 Refresh All</button>
+        <button class="btn-ghost" onclick="openProcessModal('cpu')">📊 CPU Processes</button>
+        <button class="btn-ghost" onclick="openProcessModal('memory')">🧠 Memory Processes</button>
+        <button class="btn-ghost" onclick="openCronModal()">⏰ Add Cron</button>
+      </div>
+    </aside>
 
-    <!-- File Viewer Modal -->
+    <main class="main">
+      <div class="topbar">
+        <h1>System Control Center</h1>
+        <div id="clock"><span class="time">--:--:--</span><span class="date">--</span></div>
+      </div>
+
+      <section class="grid-top">
+        <div class="card stat-card clickable" onclick="openProcessModal('cpu')">
+          <h3><span class="icon">⚙️</span> CPU Usage</h3>
+          <div class="stat-value" id="cpu-value">--%</div>
+          <div class="stat-details" id="cpu-details">Loading...</div>
+          <div class="progress-bar"><div class="progress-fill" id="cpu-bar" style="width:0%"></div></div>
+        </div>
+        <div class="card stat-card clickable" onclick="openProcessModal('memory')">
+          <h3><span class="icon">🧠</span> Memory (RAM)</h3>
+          <div class="stat-value" id="ram-value">--%</div>
+          <div class="stat-details" id="ram-details">Loading...</div>
+          <div class="progress-bar"><div class="progress-fill" id="ram-bar" style="width:0%"></div></div>
+        </div>
+        <div class="card stat-card">
+          <h3><span class="icon">💽</span> Storage</h3>
+          <div class="stat-value" id="storage-value">--%</div>
+          <div class="stat-details" id="storage-details">Loading...</div>
+          <div class="progress-bar"><div class="progress-fill" id="storage-bar" style="width:0%"></div></div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="card panel workspace-section">
+          <div class="panel-header">
+            <h2><span class="icon">📁</span> Workspace Explorer</h2>
+            <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+          </div>
+          <div class="breadcrumbs" id="breadcrumbs"></div>
+          <ul class="file-list" id="file-list"><li class="file-item">Loading files...</li></ul>
+          <p class="last-updated" id="last-updated">Last updated: Never</p>
+        </div>
+
+        <div style="display:grid;gap:14px;align-content:start;">
+          <div class="card panel cron-section">
+            <div class="panel-header">
+              <h2><span class="icon">⏰</span> Cron Jobs</h2>
+              <button class="add-cron-btn" onclick="openCronModal()">Add</button>
+            </div>
+            <div class="cron-list" id="cronList">
+              <div class="empty-cron"><span class="icon">📭</span><div>Loading cron jobs...</div></div>
+            </div>
+          </div>
+
+          <div class="card panel pm2-section">
+            <div class="panel-header pm2-header">
+              <h2><span class="icon">⚡</span> PM2 Processes</h2>
+              <button class="add-cron-btn" onclick="refreshPM2()">Refresh</button>
+            </div>
+            <div class="pm2-grid" id="pm2Grid">
+              <div class="empty-pm2"><span class="icon">🚫</span><div>Loading PM2 processes...</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<!-- File Viewer Modal -->
     <div class="modal" id="fileModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -1083,6 +952,12 @@ h1 {
                             <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${proc.script.split('/').pop()}</span>
                         </div>
                     </div>
+                    <div class="pm2-actions">
+                        <button class="pm2-action-btn" onclick="event.stopPropagation(); openLogsModal('${proc.name}')">📜 Logs</button>
+                        <button class="pm2-action-btn" onclick="event.stopPropagation(); pm2Action('${proc.name}', 'restart')">🔄 Restart</button>
+                        <button class="pm2-action-btn stop" onclick="event.stopPropagation(); pm2Action('${proc.name}', 'stop')">⏹ Stop</button>
+                        <button class="pm2-action-btn" onclick="event.stopPropagation(); pm2Action('${proc.name}', 'start')">▶️ Start</button>
+                    </div>
                 `;
                 container.appendChild(div);
             });
@@ -1104,6 +979,31 @@ h1 {
             document.querySelector('.pm2-header .add-cron-btn').classList.add('loading');
             await fetchPM2Processes();
             document.querySelector('.pm2-header .add-cron-btn').classList.remove('loading');
+        }
+
+        async function pm2Action(name, action) {
+            const ok = confirm(`Run '${action}' on PM2 process '${name}'?`);
+            if (!ok) return;
+
+            try {
+                const response = await fetch(`/api/pm2/${encodeURIComponent(name)}/${action}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`✅ ${action.toUpperCase()} sukses untuk ${name}`);
+                    await fetchPM2Processes();
+                    if (currentPM2Process === name) {
+                        await refreshLogs();
+                    }
+                } else {
+                    alert(`❌ Gagal ${action} ${name}: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('PM2 action error:', error);
+                alert(`❌ Error saat ${action} ${name}`);
+            }
         }
         
         async function openLogsModal(processName) {
