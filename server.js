@@ -20,9 +20,10 @@ const DASHBOARD_PASS = process.env.DASHBOARD_PASS || '@Facriz3f';
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'domrpjzgk';
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '463868824844246';
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'lDi4Dw6uXAenaiv2s7ZllcpnnSQ';
+const LOCAL_UPLOAD_DIR = path.join(WORKSPACE, 'uploads');
 
 // Parse JSON bodies
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // Basic Auth middleware
 app.use((req, res, next) => {
@@ -767,6 +768,70 @@ app.post('/api/pm2/:name/:action', async (req, res) => {
     } catch (error) {
         console.error('Error performing PM2 action:', error);
         res.status(500).json({ success: false, error: 'Failed to perform PM2 action' });
+    }
+});
+
+// Local upload endpoint (base64/data URL payload)
+app.post('/api/upload-local', (req, res) => {
+    try {
+        const { fileName, dataUrl } = req.body || {};
+        if (!fileName || !dataUrl || typeof dataUrl !== 'string') {
+            return res.status(400).json({ error: 'fileName and dataUrl are required' });
+        }
+
+        const safeName = path.basename(fileName).replace(/[^a-zA-Z0-9._-]/g, '_');
+        const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+        if (!match) {
+            return res.status(400).json({ error: 'Invalid dataUrl format' });
+        }
+
+        const b64 = match[2];
+        const buffer = Buffer.from(b64, 'base64');
+
+        fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
+
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const finalName = `${ts}_${safeName}`;
+        const fullPath = path.join(LOCAL_UPLOAD_DIR, finalName);
+
+        fs.writeFileSync(fullPath, buffer);
+
+        return res.json({
+            success: true,
+            fileName: finalName,
+            path: fullPath,
+            size: buffer.length
+        });
+    } catch (error) {
+        console.error('Local upload error:', error);
+        res.status(500).json({ error: 'Failed to save file locally' });
+    }
+});
+
+// Local storage info
+app.get('/api/local-storage-info', async (req, res) => {
+    try {
+        fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
+        const result = await execAsync(`du -sb ${LOCAL_UPLOAD_DIR} | awk '{print $1}'`);
+        const usedBytes = parseInt((result.stdout || '0').trim(), 10) || 0;
+
+        const disk = await execAsync('df -B1 /');
+        const lines = disk.stdout.trim().split('\n');
+        const parts = lines[1].split(/\s+/);
+        const total = parseInt(parts[1], 10) || 0;
+        const used = parseInt(parts[2], 10) || 0;
+        const avail = parseInt(parts[3], 10) || 0;
+
+        res.json({
+            uploadDir: LOCAL_UPLOAD_DIR,
+            uploadUsedBytes: usedBytes,
+            diskTotalBytes: total,
+            diskUsedBytes: used,
+            diskAvailBytes: avail
+        });
+    } catch (error) {
+        console.error('Local storage info error:', error);
+        res.status(500).json({ error: 'Failed to fetch local storage info' });
     }
 });
 

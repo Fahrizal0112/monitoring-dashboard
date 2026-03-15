@@ -172,12 +172,12 @@ h1{font-size:1.7rem}
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="refresh-btn" onclick="refreshData()">Refresh</button>
               <button class="add-cron-btn" onclick="triggerUpload()">⬆️ Upload</button>
-              <button class="cron-action-btn" onclick="loadCloudinaryQuota()">☁️ Quota</button>
+              <button class="cron-action-btn" onclick="loadLocalStorageInfo()">💾 Storage</button>
               <input id="uploadInput" type="file" style="display:none" onchange="handleUploadFile(event)" />
             </div>
           </div>
           <div class="breadcrumbs" id="breadcrumbs"></div>
-          <div id="cloudinaryQuota" class="file-meta" style="margin-bottom:10px;">Cloudinary quota: belum dimuat</div>
+          <div id="cloudinaryQuota" class="file-meta" style="margin-bottom:10px;">Local storage: belum dimuat</div>
           <ul class="file-list" id="file-list"><li class="file-item">Loading files...</li></ul>
           <p class="last-updated" id="last-updated">Last updated: Never</p>
         </div>
@@ -1197,24 +1197,21 @@ h1{font-size:1.7rem}
             document.getElementById('uploadModal').classList.add('show');
         }
 
-        async function loadCloudinaryQuota() {
+        async function loadLocalStorageInfo() {
             const quotaEl = document.getElementById('cloudinaryQuota');
-            quotaEl.textContent = 'Cloudinary quota: loading...';
+            quotaEl.textContent = 'Local storage: loading...';
             try {
-                const response = await fetch('/api/cloudinary/usage');
+                const response = await fetch('/api/local-storage-info');
                 const data = await response.json();
                 if (!response.ok) {
-                    quotaEl.textContent = `Cloudinary quota error: ${data.error || 'unknown'}`;
+                    quotaEl.textContent = `Local storage error: ${data.error || 'unknown'}`;
                     return;
                 }
 
-                const storage = data.storage || {};
-                const bandwidth = data.bandwidth || {};
-                const reqs = data.requests || {};
                 const gb = (v) => (v ? (v / (1024 ** 3)).toFixed(2) : '0.00');
-                quotaEl.textContent = `Cloudinary quota • Storage: ${gb(storage.usage)}GB/${gb(storage.limit)}GB | Bandwidth: ${gb(bandwidth.usage)}GB/${gb(bandwidth.limit)}GB | Requests: ${reqs.usage || 0}/${reqs.limit || 0}`;
+                quotaEl.textContent = `Local uploads: ${gb(data.uploadUsedBytes)}GB | Disk free: ${gb(data.diskAvailBytes)}GB / ${gb(data.diskTotalBytes)}GB`;
             } catch (error) {
-                quotaEl.textContent = 'Cloudinary quota: failed to load';
+                quotaEl.textContent = 'Local storage: failed to load';
             }
         }
 
@@ -1225,48 +1222,45 @@ h1{font-size:1.7rem}
             openUploadModal(file.name);
 
             try {
-                const sigResp = await fetch('/api/cloudinary/signature');
-                const sigData = await sigResp.json();
-                if (!sigResp.ok) throw new Error(sigData.error || 'Failed to get signature');
+                const reader = new FileReader();
 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('api_key', sigData.apiKey);
-                formData.append('timestamp', sigData.timestamp);
-                formData.append('signature', sigData.signature);
-
-                const xhr = new XMLHttpRequest();
-                const uploadUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`;
-
-                xhr.upload.onprogress = (e) => {
+                reader.onprogress = (e) => {
                     if (e.lengthComputable) {
                         const percent = Math.round((e.loaded / e.total) * 100);
                         document.getElementById('uploadProgressBar').style.width = `${percent}%`;
-                        document.getElementById('uploadStatus').textContent = `Uploading... ${percent}%`;
+                        document.getElementById('uploadStatus').textContent = `Reading file... ${percent}%`;
                     }
                 };
 
-                xhr.onload = async () => {
+                reader.onload = async () => {
                     try {
-                        const res = JSON.parse(xhr.responseText || '{}');
-                        if (xhr.status >= 200 && xhr.status < 300) {
+                        document.getElementById('uploadStatus').textContent = 'Uploading to local storage...';
+                        document.getElementById('uploadProgressBar').style.width = '85%';
+
+                        const response = await fetch('/api/upload-local', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ fileName: file.name, dataUrl: reader.result })
+                        });
+
+                        const result = await response.json();
+                        if (response.ok && result.success) {
                             document.getElementById('uploadProgressBar').style.width = '100%';
-                            document.getElementById('uploadStatus').textContent = `✅ Upload sukses: ${res.secure_url || file.name}`;
-                            await loadCloudinaryQuota();
+                            document.getElementById('uploadStatus').textContent = `✅ Upload sukses (local): ${result.fileName}`;
+                            await loadLocalStorageInfo();
                         } else {
-                            document.getElementById('uploadStatus').textContent = `❌ Upload gagal: ${res.error?.message || 'Unknown error'}`;
+                            document.getElementById('uploadStatus').textContent = `❌ Upload gagal: ${result.error || 'Unknown error'}`;
                         }
-                    } catch {
-                        document.getElementById('uploadStatus').textContent = '❌ Upload gagal (invalid response)';
+                    } catch (err) {
+                        document.getElementById('uploadStatus').textContent = `❌ Upload error: ${err.message || 'unknown'}`;
                     }
                 };
 
-                xhr.onerror = () => {
-                    document.getElementById('uploadStatus').textContent = '❌ Upload gagal (network error)';
+                reader.onerror = () => {
+                    document.getElementById('uploadStatus').textContent = '❌ Gagal membaca file';
                 };
 
-                xhr.open('POST', uploadUrl);
-                xhr.send(formData);
+                reader.readAsDataURL(file);
             } catch (error) {
                 document.getElementById('uploadStatus').textContent = `❌ ${error.message || 'Upload error'}`;
             } finally {
@@ -1276,7 +1270,7 @@ h1{font-size:1.7rem}
 
         function refreshData() {
             document.querySelector('.refresh-btn').classList.add('loading');
-            Promise.all([fetchStats(), fetchFiles(currentPath), fetchCronJobs(), fetchPM2Processes(), loadCloudinaryQuota()]).then(() => {
+            Promise.all([fetchStats(), fetchFiles(currentPath), fetchCronJobs(), fetchPM2Processes(), loadLocalStorageInfo()]).then(() => {
                 document.querySelector('.refresh-btn').classList.remove('loading');
                 document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
             });
