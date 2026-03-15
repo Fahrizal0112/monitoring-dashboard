@@ -2,6 +2,7 @@ const express = require('express');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { exec } = require('child_process');
 const { promisify } = require('util');
 
@@ -14,6 +15,11 @@ const WORKSPACE = '/root/.openclaw/workspace';
 // Basic Auth credentials (can be overridden by env vars)
 const DASHBOARD_USER = process.env.DASHBOARD_USER || 'fahrizal';
 const DASHBOARD_PASS = process.env.DASHBOARD_PASS || '@Facriz3f';
+
+// Cloudinary config (prefer env vars in production)
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'domrpjzgk';
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '463868824844246';
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'lDi4Dw6uXAenaiv2s7ZllcpnnSQ';
 
 // Parse JSON bodies
 app.use(express.json());
@@ -761,6 +767,62 @@ app.post('/api/pm2/:name/:action', async (req, res) => {
     } catch (error) {
         console.error('Error performing PM2 action:', error);
         res.status(500).json({ success: false, error: 'Failed to perform PM2 action' });
+    }
+});
+
+// Cloudinary public config
+app.get('/api/cloudinary/config', (req, res) => {
+    res.json({
+        cloudName: CLOUDINARY_CLOUD_NAME,
+        apiKey: CLOUDINARY_API_KEY
+    });
+});
+
+// Cloudinary signed upload params
+app.get('/api/cloudinary/signature', (req, res) => {
+    try {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const stringToSign = `timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+        const signature = crypto.createHash('sha1').update(stringToSign).digest('hex');
+
+        res.json({
+            timestamp,
+            signature,
+            apiKey: CLOUDINARY_API_KEY,
+            cloudName: CLOUDINARY_CLOUD_NAME
+        });
+    } catch (error) {
+        console.error('Error creating Cloudinary signature:', error);
+        res.status(500).json({ error: 'Failed to create upload signature' });
+    }
+});
+
+// Cloudinary usage/quota info
+app.get('/api/cloudinary/usage', async (req, res) => {
+    try {
+        const auth = Buffer.from(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`).toString('base64');
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/usage`, {
+            headers: {
+                Authorization: `Basic ${auth}`
+            }
+        });
+
+        if (!response.ok) {
+            const txt = await response.text();
+            return res.status(500).json({ error: `Cloudinary usage error: ${txt}` });
+        }
+
+        const data = await response.json();
+        res.json({
+            credits: data.credits,
+            storage: data.storage,
+            bandwidth: data.bandwidth,
+            requests: data.requests,
+            raw: data
+        });
+    } catch (error) {
+        console.error('Error fetching Cloudinary usage:', error);
+        res.status(500).json({ error: 'Failed to fetch Cloudinary usage' });
     }
 });
 

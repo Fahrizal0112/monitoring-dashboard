@@ -169,9 +169,15 @@ h1{font-size:1.7rem}
         <div class="card panel workspace-section">
           <div class="panel-header">
             <h2><span class="icon">📁</span> Workspace Explorer</h2>
-            <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="refresh-btn" onclick="refreshData()">Refresh</button>
+              <button class="add-cron-btn" onclick="triggerUpload()">⬆️ Upload</button>
+              <button class="cron-action-btn" onclick="loadCloudinaryQuota()">☁️ Quota</button>
+              <input id="uploadInput" type="file" style="display:none" onchange="handleUploadFile(event)" />
+            </div>
           </div>
           <div class="breadcrumbs" id="breadcrumbs"></div>
+          <div id="cloudinaryQuota" class="file-meta" style="margin-bottom:10px;">Cloudinary quota: belum dimuat</div>
           <ul class="file-list" id="file-list"><li class="file-item">Loading files...</li></ul>
           <p class="last-updated" id="last-updated">Last updated: Never</p>
         </div>
@@ -328,6 +334,23 @@ h1{font-size:1.7rem}
                         <button type="submit" class="btn btn-primary">Save Cron Job</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Progress Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content" style="max-width:520px;">
+            <div class="modal-header">
+                <div class="modal-title"><span>☁️</span><span>Uploading File...</span></div>
+                <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="uploadFileName" class="file-meta" style="margin-bottom:10px;">Preparing...</div>
+                <div class="progress-bar" style="height:14px; margin-top:0;">
+                    <div id="uploadProgressBar" class="progress-fill" style="width:0%"></div>
+                </div>
+                <div id="uploadStatus" class="file-meta" style="margin-top:10px;">0%</div>
             </div>
         </div>
     </div>
@@ -716,6 +739,7 @@ h1{font-size:1.7rem}
             const processModal = document.getElementById('processModal');
             const cronModal = document.getElementById('cronModal');
             const logsModal = document.getElementById('logsModal');
+            const uploadModal = document.getElementById('uploadModal');
             
             if (event.target === fileModal) {
                 closeFileModal();
@@ -729,6 +753,9 @@ h1{font-size:1.7rem}
             if (event.target === logsModal) {
                 closeLogsModal();
             }
+            if (event.target === uploadModal) {
+                closeUploadModal();
+            }
         }
         
         document.addEventListener('keydown', function(event) {
@@ -737,6 +764,7 @@ h1{font-size:1.7rem}
                 closeProcessModal();
                 closeCronModal();
                 closeLogsModal();
+                closeUploadModal();
             }
         });
         
@@ -1152,9 +1180,103 @@ h1{font-size:1.7rem}
             }
         });
         
+        function triggerUpload() {
+            const input = document.getElementById('uploadInput');
+            if (input) input.click();
+        }
+
+        function closeUploadModal() {
+            const modal = document.getElementById('uploadModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        function openUploadModal(fileName) {
+            document.getElementById('uploadFileName').textContent = `File: ${fileName}`;
+            document.getElementById('uploadProgressBar').style.width = '0%';
+            document.getElementById('uploadStatus').textContent = 'Starting upload...';
+            document.getElementById('uploadModal').classList.add('show');
+        }
+
+        async function loadCloudinaryQuota() {
+            const quotaEl = document.getElementById('cloudinaryQuota');
+            quotaEl.textContent = 'Cloudinary quota: loading...';
+            try {
+                const response = await fetch('/api/cloudinary/usage');
+                const data = await response.json();
+                if (!response.ok) {
+                    quotaEl.textContent = `Cloudinary quota error: ${data.error || 'unknown'}`;
+                    return;
+                }
+
+                const storage = data.storage || {};
+                const bandwidth = data.bandwidth || {};
+                const reqs = data.requests || {};
+                const gb = (v) => (v ? (v / (1024 ** 3)).toFixed(2) : '0.00');
+                quotaEl.textContent = `Cloudinary quota • Storage: ${gb(storage.usage)}GB/${gb(storage.limit)}GB | Bandwidth: ${gb(bandwidth.usage)}GB/${gb(bandwidth.limit)}GB | Requests: ${reqs.usage || 0}/${reqs.limit || 0}`;
+            } catch (error) {
+                quotaEl.textContent = 'Cloudinary quota: failed to load';
+            }
+        }
+
+        async function handleUploadFile(event) {
+            const file = event?.target?.files?.[0];
+            if (!file) return;
+
+            openUploadModal(file.name);
+
+            try {
+                const sigResp = await fetch('/api/cloudinary/signature');
+                const sigData = await sigResp.json();
+                if (!sigResp.ok) throw new Error(sigData.error || 'Failed to get signature');
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('api_key', sigData.apiKey);
+                formData.append('timestamp', sigData.timestamp);
+                formData.append('signature', sigData.signature);
+
+                const xhr = new XMLHttpRequest();
+                const uploadUrl = `https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`;
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        document.getElementById('uploadProgressBar').style.width = `${percent}%`;
+                        document.getElementById('uploadStatus').textContent = `Uploading... ${percent}%`;
+                    }
+                };
+
+                xhr.onload = async () => {
+                    try {
+                        const res = JSON.parse(xhr.responseText || '{}');
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            document.getElementById('uploadProgressBar').style.width = '100%';
+                            document.getElementById('uploadStatus').textContent = `✅ Upload sukses: ${res.secure_url || file.name}`;
+                            await loadCloudinaryQuota();
+                        } else {
+                            document.getElementById('uploadStatus').textContent = `❌ Upload gagal: ${res.error?.message || 'Unknown error'}`;
+                        }
+                    } catch {
+                        document.getElementById('uploadStatus').textContent = '❌ Upload gagal (invalid response)';
+                    }
+                };
+
+                xhr.onerror = () => {
+                    document.getElementById('uploadStatus').textContent = '❌ Upload gagal (network error)';
+                };
+
+                xhr.open('POST', uploadUrl);
+                xhr.send(formData);
+            } catch (error) {
+                document.getElementById('uploadStatus').textContent = `❌ ${error.message || 'Upload error'}`;
+            } finally {
+                event.target.value = '';
+            }
+        }
+
         function refreshData() {
             document.querySelector('.refresh-btn').classList.add('loading');
-            Promise.all([fetchStats(), fetchFiles(currentPath), fetchCronJobs(), fetchPM2Processes()]).then(() => {
+            Promise.all([fetchStats(), fetchFiles(currentPath), fetchCronJobs(), fetchPM2Processes(), loadCloudinaryQuota()]).then(() => {
                 document.querySelector('.refresh-btn').classList.remove('loading');
                 document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
             });
